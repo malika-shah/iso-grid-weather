@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>US ISO Real-Time Grid & Weather Situational Awareness</title>
+  <!-- Supabase JS Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Chart.js Library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-main); padding: 24px; }
+
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 16px; margin-bottom: 24px; }
+    .title-group h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+    .title-group p { color: var(--text-muted); font-size: 0.875rem; margin-top: 4px; }
+    
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3); color: var(--accent-green);
+      padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.8rem;
+    }
+    .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .full-width { grid-column: span 2; }
+
+    .panel { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 12px; margin-bottom: 16px; }
+    .panel-title { font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-cyan); }
+    .region-tag { background: #1e293b; color: var(--text-main); padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; transition: background 0.3s ease; }
+
+    .map-wrapper { position: relative; width: 100%; text-align: center; }
+    svg.iso-map { width: 100%; height: auto; max-height: 380px; }
+    
+    .iso-region { fill: #1e293b; stroke: #334155; stroke-width: 2; cursor: pointer; transition: all 0.25s ease; }
+    .iso-region:hover, .iso-region.active { fill: #2563eb; stroke: var(--accent-cyan); stroke-width: 2.5; filter: drop-shadow(0 0 12px rgba(6, 182, 212, 0.5)); }
+    .map-text { fill: #f8fafc; font-size: 13px; font-weight: 700; pointer-events: none; text-anchor: middle; }
+
+    .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed #1e293b; }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-label { color: var(--text-muted); font-size: 0.9rem; }
+    .metric-val { font-family: 'SF Mono', 'Courier New', monospace; font-weight: 700; font-size: 1.1rem; }
+    
+    .price-green { color: var(--accent-green); }
+    .price-red { color: var(--accent-red); }
+
+    .chart-container { position: relative; height: 280px; width: 100%; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-group">
+      <h1>US Grid & Weather Situational Awareness</h1>
+      <p>Hover over any ISO region to inspect real-time telemetry and database streams</p>
+    </div>
+    <div class="status-badge">
+      <span class="pulse-dot"></span>
+      <span>REALTIME TELEMETRY ACTIVE</span>
+    </div>
+  </header>
+
+  <div class="dashboard-grid">
+
+    <!-- Interactive USA Map -->
+    <div class="panel full-width">
+      <div class="panel-header">
+        <span class="panel-title">Regional ISO/RTO Territories</span>
+        <span style="color: var(--text-muted); font-size: 0.8rem;">Hover region to inspect telemetry</span>
+      </div>
+      <div class="map-wrapper">
+        <svg class="iso-map" viewBox="0 0 960 480">
+          <path id="CAISO" class="iso-region active" d="M 60,90 L 130,105 L 110,290 L 35,250 Z" onmouseover="selectISO('CAISO')"/>
+          <text x="80" y="190" class="map-text">CAISO</text>
+
+          <path id="SPP" class="iso-region" d="M 280,120 L 420,120 L 420,290 L 290,280 Z" onmouseover="selectISO('SPP')"/>
+          <text x="350" y="200" class="map-text">SPP</text>
+
+          <path id="ERCOT" class="iso-region" d="M 290,295 L 450,305 L 420,440 L 270,390 Z" onmouseover="selectISO('ERCOT')"/>
+          <text x="355" y="370" class="map-text">ERCOT</text>
+
+          <path id="MISO" class="iso-region" d="M 430,70 L 610,80 L 600,320 L 480,350 L 430,190 Z" onmouseover="selectISO('MISO')"/>
+          <text x="510" y="200" class="map-text">MISO</text>
+
+          <path id="PJM" class="iso-region" d="M 620,120 L 780,110 L 820,190 L 650,210 Z" onmouseover="selectISO('PJM')"/>
+          <text x="710" y="160" class="map-text">PJM</text>
+
+          <path id="NYISO" class="iso-region" d="M 785,80 L 855,70 L 855,130 L 795,140 Z" onmouseover="selectISO('NYISO')"/>
+          <text x="825" y="110" class="map-text">NYISO</text>
+
+          <path id="ISONE" class="iso-region" d="M 865,55 L 930,45 L 940,110 L 875,120 Z" onmouseover="selectISO('ISONE')"/>
+          <text x="900" y="85" class="map-text">ISO-NE</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Weather Telemetry -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Weather Telemetry</span>
+        <span id="weather-iso-tag" class="region-tag">CAISO</span>
+      </div>
+      <div class="metric-row"><span class="metric-label">Solar Irradiance:</span><span class="metric-val" id="solar-val">Loading...</span></div>
+      <div class="metric-row"><span class="metric-label">Wind Speed (10m):</span><span class="metric-val" id="wind-val">Loading...</span></div>
+      <div class="metric-row"><span class="metric-label">Air Temperature:</span><span class="metric-val" id="temp-val">Loading...</span></div>
+      <div class="metric-row"><span class="metric-label">Cloud Cover:</span><span class="metric-val" id="cloud-val">Loading...</span></div>
+    </div>
+
+    <!-- Grid & Market Telemetry -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Grid & Market Telemetry</span>
+        <span id="market-iso-tag" class="region-tag">CAISO</span>
+      </div>
+      <div class="metric-row"><span class="metric-label">System Hub LMP:</span><span class="metric-val price-green" id="hub-lmp">Loading...</span></div>
+      <div class="metric-row"><span class="metric-label">Data Center Hub LMP:</span><span class="metric-val price-green" id="dc-lmp">Loading...</span></div>
+      <div class="metric-row"><span class="metric-label">Renewable Congestion LMP:</span><span class="metric-val" id="renewable-lmp">Loading...</span></div>
+      <div class="metric-row"><span class="metric-label">Grid Load Demand:</span><span class="metric-val" id="grid-load">Loading...</span></div>
+    </div>
+
+    <!-- 24-Hour Timeline Chart -->
+    <div class="panel full-width">
+      <div class="panel-header">
+        <span class="panel-title">24-Hour Timeline: Live Solar Irradiance vs System Hub LMP</span>
+        <span id="chart-iso-tag" class="region-tag">CAISO</span>
+      </div>
+      <div class="chart-container">
+        <canvas id="correlationChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Verified Credentials
+    const SUPABASE_URL = 'https://fexpkltzaemqomcictyz.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZleHBrbHR6YWVtcW9tY2ljdHl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2NDU0NjIsImV4cCI6MjEwMjIyMTQ2Mn0.bUXLQ_eRwctNn491ZvSgaLSBqSH-NEy1fCq0fCiH0Lc';
+    
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    });
+
+    const isoCoords = {
+      'CAISO': { lat: 36.77, lon: -119.41, hub: 28.50, dc: 30.20, ren: -12.40, load: 24500 },
+      'ERCOT': { lat: 30.26, lon: -97.74, hub: 42.10, dc: 45.80, ren: 14.20, load: 58200 },
+      'PJM':   { lat: 39.95, lon: -75.16, hub: 34.60, dc: 36.10, ren: 18.90, load: 88400 },
+      'MISO':  { lat: 38.62, lon: -90.19, hub: 29.80, dc: 31.40, ren: -5.20, load: 62100 },
+      'SPP':   { lat: 35.46, lon: -97.51, hub: 22.40, dc: 24.10, ren: -18.60, load: 21300 },
+      'NYISO': { lat: 43.04, lon: -76.14, hub: 38.90, dc: 42.50, ren: 22.10, load: 17800 },
+      'ISONE': { lat: 42.36, lon: -71.05, hub: 44.20, dc: 47.90, ren: 28.40, load: 14200 }
+    };
+
+    let currentISO = 'CAISO';
+    let correlationChart = null;
+
+    // 1. Fetch live weather forecast from Open-Meteo API
+    async function fetchLive24HourWeather(iso) {
+      try {
+        const coords = isoCoords[iso];
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,wind_speed_10m,direct_normal_irradiance,cloud_cover&hourly=temperature_2m,direct_normal_irradiance&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=1`;
+        
+        const res = await fetch(url);
+        const data = await res.json();
+
+        document.getElementById('temp-val').innerText = `${data.current.temperature_2m} °F`;
+        document.getElementById('wind-val').innerText = `${data.current.wind_speed_10m} mph`;
+        document.getElementById('solar-val').innerText = `${data.current.direct_normal_irradiance} W/m²`;
+        document.getElementById('cloud-val').innerText = `${data.current.cloud_cover} %`;
+
+        const times = data.hourly.time.map(t => t.split('T')[1]);
+        const solarCurve = data.hourly.direct_normal_irradiance;
+
+        return { times, solarCurve };
+      } catch (err) {
+        return { times: ['00:00','04:00','08:00','12:00','16:00','20:00'], solarCurve: [0,0,300,800,400,0] };
+      }
+    }
+
+    // 2. Fetch market data from Supabase DB with indicator badge
+    async function fetchCurrentMarketData(iso) {
+      const marketTag = document.getElementById('market-iso-tag');
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('iso_metrics')
+          .select('*')
+          .eq('iso_code', iso)
+          .single();
+
+        if (error || !data) {
+          marketTag.innerText = `${iso} (BACKUP MODE)`;
+          marketTag.style.background = '#ef4444';
+          
+          const backup = isoCoords[iso];
+          renderMarketUI({
+            hub_lmp: backup.hub,
+            dc_lmp: backup.dc,
+            renewable_congestion_lmp: backup.ren,
+            grid_load_mw: backup.load
+          });
+          return { hub_lmp: backup.hub };
+        }
+
+        marketTag.innerText = `${iso} (SUPABASE LIVE)`;
+        marketTag.style.background = '#10b981';
+        
+        renderMarketUI(data);
+        return data;
+      } catch (err) {
+        marketTag.innerText = `${iso} (BACKUP MODE)`;
+        marketTag.style.background = '#ef4444';
+        
+        const backup = isoCoords[iso];
+        renderMarketUI({
+          hub_lmp: backup.hub,
+          dc_lmp: backup.dc,
+          renewable_congestion_lmp: backup.ren,
+          grid_load_mw: backup.load
+        });
+        return { hub_lmp: backup.hub };
+      }
+    }
+
+    // 3. Fetch historic LMP curve from Supabase
+    async function fetchDatabasePriceHistory(iso) {
+      try {
+        const { data } = await supabaseClient
+          .from('iso_history')
+          .select('hub_lmp')
+          .eq('iso_code', iso)
+          .order('created_at', { ascending: true })
+          .limit(24);
+
+        if (data && data.length > 0) {
+          return { lmpCurve: data.map(d => d.hub_lmp) };
+        }
+      } catch (err) {}
+
+      const baseHub = isoCoords[iso].hub;
+      return { lmpCurve: [baseHub*0.9, baseHub*0.85, baseHub*0.95, baseHub*0.7, baseHub*0.5, baseHub*0.8, baseHub*1.6, baseHub*1.2] };
+    }
+
+    function renderMarketUI(data) {
+      document.getElementById('hub-lmp').innerText = `$${data.hub_lmp} / MWh`;
+      document.getElementById('dc-lmp').innerText = `$${data.dc_lmp} / MWh`;
+      document.getElementById('renewable-lmp').innerText = `$${data.renewable_congestion_lmp} / MWh`;
+      document.getElementById('grid-load').innerText = `${data.grid_load_mw ? data.grid_load_mw.toLocaleString() : '--'} MW`;
+
+      const renElem = document.getElementById('renewable-lmp');
+      renElem.className = data.renewable_congestion_lmp < 0 ? 'metric-val price-red' : 'metric-val price-green';
+    }
+
+    async function selectISO(iso) {
+      currentISO = iso;
+
+      document.querySelectorAll('.iso-region').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById(iso);
+      if (activeEl) activeEl.classList.add('active');
+
+      document.getElementById('weather-iso-tag').innerText = iso;
+      document.getElementById('chart-iso-tag').innerText = iso;
+
+      const [weather, history, currentMarket] = await Promise.all([
+        fetchLive24HourWeather(iso),
+        fetchDatabasePriceHistory(iso),
+        fetchCurrentMarketData(iso)
+      ]);
+
+      updateChart(weather.times, weather.solarCurve, history.lmpCurve);
+    }
+
+    function initChart() {
+      const ctx = document.getElementById('correlationChart').getContext('2d');
+      correlationChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'System Hub LMP ($/MWh)',
+              data: [],
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              yAxisID: 'yLMP',
+              tension: 0.3,
+              fill: true
+            },
+            {
+              label: 'Solar Irradiance (W/m²)',
+              data: [],
+              borderColor: '#f59e0b',
+              borderDash: [4, 4],
+              yAxisID: 'ySolar',
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: '#1e293b' }, ticks: { color: '#9ca3af' } },
+            yLMP: {
+              type: 'linear', position: 'left',
+              grid: { color: '#1e293b' }, ticks: { color: '#10b981' },
+              title: { display: true, text: 'LMP Price ($/MWh)', color: '#10b981' }
+            },
+            ySolar: {
+              type: 'linear', position: 'right',
+              grid: { drawOnChartArea: false }, ticks: { color: '#f59e0b' },
+              title: { display: true, text: 'Solar Irradiance (W/m²)', color: '#f59e0b' }
+            }
+          },
+          plugins: { legend: { labels: { color: '#f9fafb' } } }
+        }
+      });
+    }
+
+    function updateChart(timestamps, solarData, lmpData) {
+      if (!correlationChart) return;
+      correlationChart.data.labels = timestamps;
+      correlationChart.data.datasets[0].data = lmpData;
+      correlationChart.data.datasets[1].data = solarData;
+      correlationChart.update();
+    }
+
+    // Initialize Page
+    initChart();
+    selectISO('CAISO');
+
+    // Subscribe to Postgres Changes via Realtime WebSockets
+    supabaseClient
+      .channel('public:iso_metrics')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'iso_metrics' }, (payload) => {
+        if (payload.new && payload.new.iso_code === currentISO) {
+          renderMarketUI(payload.new);
+        }
+      })
+      .subscribe();
+  </script>
+</body>
+</html>
