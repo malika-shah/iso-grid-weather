@@ -4,7 +4,11 @@ on:
   schedule:
     # Runs every 15 minutes
     - cron: '*/15 * * * *'
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch:
+
+# Add write permissions for git push
+permissions:
+  contents: write
 
 jobs:
   build-and-fetch:
