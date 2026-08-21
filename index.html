@@ -103,8 +103,8 @@
       <select class="select-input" id="iso-select" onchange="renderActiveISO()">
         <option value="ERCOT">ERCOT (Texas - West Hub)</option>
         <option value="CAISO">CAISO (California - SP15)</option>
-        <option value="PJM">PJM (Mid-Atlantic - West)</option>
         <option value="NYISO">NYISO (New York - Zone J)</option>
+        <option value="MISO">MISO (Midwest - Indiana Hub)</option>
       </select>
 
       <button class="btn" onclick="fetchLiveDataset()">⚡ Pull JSON Data</button>
@@ -115,7 +115,7 @@
     <div class="metric-card accent-cyan">
       <div class="metric-label"><span>Real-Time LMP</span><span>RTM</span></div>
       <div class="metric-value" id="val-rtm">--</div>
-      <div class="metric-sub">Latest 5-Min Settlement</div>
+      <div class="metric-sub">Latest Settlement</div>
     </div>
 
     <div class="metric-card accent-amber">
@@ -127,7 +127,7 @@
     <div class="metric-card accent-emerald" id="spread-card">
       <div class="metric-label"><span>Arbitrage Spread</span><span>RTM - DAM</span></div>
       <div class="metric-value" id="val-spread">--</div>
-      <div class="metric-sub" id="spread-status">Active Market Premium</div>
+      <div class="metric-sub" id="spread-status">Active Market Spread</div>
     </div>
 
     <div class="metric-card accent-rose">
@@ -225,9 +225,10 @@
     }
 
     function renderActiveISO() {
-      if (!marketDataset) return;
+      if (!marketDataset || !marketDataset.markets) return;
       const key = document.getElementById('iso-select').value;
       const data = marketDataset.markets[key];
+      if (!data) return;
 
       document.getElementById('val-rtm').innerText = `$${data.pricing.rtm_latest.toFixed(2)}`;
       document.getElementById('val-dam').innerText = `$${data.pricing.dam_latest.toFixed(2)}`;
