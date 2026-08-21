@@ -3,14 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AETHER | Real-Time Energy Market Arbitrage & Intelligence</title>
-  
-  <!-- Fonts & Chart.js -->
+  <title>AETHER | Live Energy Arbitrage & Telemetry</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <style>
     :root {
       --bg: #070a0f;
@@ -24,325 +21,61 @@
       --text-main: #f8fafc;
       --text-muted: #64748b;
       --text-dim: #94a3b8;
-      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-sans: 'Inter', -apple-system, sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body {
-      background-color: var(--bg);
-      color: var(--text-main);
-      font-family: var(--font-sans);
-      font-size: 13px;
-      line-height: 1.5;
-      overflow-x: hidden;
-      padding: 16px;
-    }
+    body { background-color: var(--bg); color: var(--text-main); font-family: var(--font-sans); font-size: 13px; padding: 16px; }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--panel-border); }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { width: 28px; height: 28px; background: linear-gradient(135deg, var(--accent-cyan), #0284c7); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #000; }
+    .brand-title { font-size: 15px; font-weight: 700; text-transform: uppercase; }
+    .brand-subtitle { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
 
-    /* Header */
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 16px;
-      margin-bottom: 16px;
-      border-bottom: 1px solid var(--panel-border);
-    }
+    .controls-group { display: flex; align-items: center; gap: 12px; }
+    .select-input, .btn { background: var(--panel); border: 1px solid var(--panel-border); color: var(--text-main); padding: 6px 12px; border-radius: 6px; font-size: 12px; outline: none; cursor: pointer; }
+    .select-input:hover, .btn:hover { border-color: var(--accent-cyan); }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .pulse-badge { display: flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--accent-emerald); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-family: var(--font-mono); }
+    .pulse-dot { width: 6px; height: 6px; background-color: var(--accent-emerald); border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-    .brand-logo {
-      width: 28px;
-      height: 28px;
-      background: linear-gradient(135deg, var(--accent-cyan), #0284c7);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      color: #000;
-      font-size: 14px;
-    }
-
-    .brand-title {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
-
-    .brand-subtitle {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-family: var(--font-mono);
-    }
-
-    .controls-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .select-input, .btn {
-      background: var(--panel);
-      border: 1px solid var(--panel-border);
-      color: var(--text-main);
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-family: var(--font-sans);
-      outline: none;
-      transition: all 0.2s ease;
-      cursor: pointer;
-    }
-
-    .select-input:hover, .btn:hover {
-      border-color: var(--accent-cyan);
-    }
-
-    .pulse-badge {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: var(--accent-emerald);
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-family: var(--font-mono);
-      font-weight: 600;
-    }
-
-    .pulse-dot {
-      width: 6px;
-      height: 6px;
-      background-color: var(--accent-emerald);
-      border-radius: 50%;
-      box-shadow: 0 0 8px var(--accent-emerald);
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.8); }
-      100% { opacity: 1; transform: scale(1); }
-    }
-
-    /* Metric Grid */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .metric-card {
-      background: var(--panel);
-      border: 1px solid var(--panel-border);
-      border-radius: 8px;
-      padding: 14px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .metric-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: transparent;
-    }
-
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .metric-card { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 14px; position: relative; }
+    .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
     .metric-card.accent-cyan::before { background: var(--accent-cyan); }
     .metric-card.accent-emerald::before { background: var(--accent-emerald); }
     .metric-card.accent-rose::before { background: var(--accent-rose); }
     .metric-card.accent-amber::before { background: var(--accent-amber); }
 
-    .metric-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      display: flex;
-      justify-content: space-between;
-    }
+    .metric-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 6px; }
+    .metric-value { font-size: 22px; font-weight: 700; font-family: var(--font-mono); }
+    .metric-sub { font-size: 11px; margin-top: 4px; color: var(--text-dim); }
 
-    .metric-value {
-      font-size: 22px;
-      font-weight: 700;
-      font-family: var(--font-mono);
-      letter-spacing: -0.5px;
-    }
+    .dashboard-layout { display: grid; grid-template-columns: 2.2fr 1fr; gap: 16px; }
+    .panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--panel-border); }
+    .panel-title { font-size: 13px; font-weight: 700; text-transform: uppercase; }
 
-    .metric-sub {
-      font-size: 11px;
-      margin-top: 4px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      color: var(--text-dim);
-    }
+    .chart-container { position: relative; flex-grow: 1; min-height: 380px; width: 100%; }
+    .side-stack { display: flex; flex-direction: column; gap: 16px; }
 
-    .pos { color: var(--accent-emerald); }
-    .neg { color: var(--accent-rose); }
+    .signal-card { background: rgba(14, 19, 31, 0.8); border: 1px solid var(--panel-border); border-radius: 8px; padding: 16px; text-align: center; }
+    .signal-indicator { font-size: 13px; font-weight: 800; padding: 8px 12px; border-radius: 6px; margin: 10px 0; font-family: var(--font-mono); text-transform: uppercase; }
+    .signal-charge { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border: 1px solid var(--accent-emerald); }
+    .signal-discharge { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); border: 1px solid var(--accent-rose); }
+    .signal-neutral { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); border: 1px solid var(--accent-amber); }
 
-    /* Main Dashboard Layout */
-    .dashboard-layout {
-      display: grid;
-      grid-template-columns: 2.2fr 1fr;
-      gap: 16px;
-    }
+    .weather-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .weather-item { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--panel-border); border-radius: 6px; padding: 8px; text-align: center; }
+    .weather-item .val { font-family: var(--font-mono); font-weight: 700; font-size: 13px; margin-top: 2px; }
+    .weather-item .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
 
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--panel-border);
-      border-radius: 8px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--panel-border);
-    }
-
-    .panel-title {
-      font-size: 13px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .chart-container {
-      position: relative;
-      flex-grow: 1;
-      min-height: 380px;
-      width: 100%;
-    }
-
-    /* Signal & Weather Grid */
-    .side-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    /* Arbitrage Signal Box */
-    .signal-card {
-      background: rgba(14, 19, 31, 0.8);
-      border: 1px solid var(--panel-border);
-      border-radius: 8px;
-      padding: 16px;
-      text-align: center;
-      position: relative;
-    }
-
-    .signal-indicator {
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 8px 12px;
-      border-radius: 6px;
-      margin: 10px 0;
-      display: block;
-      font-family: var(--font-mono);
-    }
-
-    .signal-charge {
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--accent-emerald);
-      border: 1px solid var(--accent-emerald);
-    }
-
-    .signal-discharge {
-      background: rgba(244, 63, 94, 0.15);
-      color: var(--accent-rose);
-      border: 1px solid var(--accent-rose);
-    }
-
-    .signal-neutral {
-      background: rgba(245, 158, 11, 0.15);
-      color: var(--accent-amber);
-      border: 1px solid var(--accent-amber);
-    }
-
-    /* Weather Driver List */
-    .weather-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .weather-item {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--panel-border);
-      border-radius: 6px;
-      padding: 8px;
-      text-align: center;
-    }
-
-    .weather-item .val {
-      font-family: var(--font-mono);
-      font-weight: 700;
-      font-size: 13px;
-      margin-top: 2px;
-    }
-
-    .weather-item .lbl {
-      font-size: 10px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-    }
-
-    /* Node Arbitrage Table */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-      margin-top: 6px;
-    }
-
-    .data-table th {
-      text-align: left;
-      padding: 8px 6px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      border-bottom: 1px solid var(--panel-border);
-      font-weight: 600;
-    }
-
-    .data-table td {
-      padding: 8px 6px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-      font-family: var(--font-mono);
-    }
-
-    .data-table tr:hover {
-      background: var(--panel-hover);
-    }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+    .data-table th { text-align: left; padding: 8px 6px; color: var(--text-muted); border-bottom: 1px solid var(--panel-border); text-transform: uppercase; }
+    .data-table td { padding: 8px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.03); font-family: var(--font-mono); }
 
     @media (max-width: 1024px) {
       .dashboard-layout { grid-template-columns: 1fr; }
@@ -352,475 +85,223 @@
 </head>
 <body>
 
-  <!-- Header -->
   <header>
     <div class="brand">
       <div class="brand-logo">A</div>
       <div>
         <div class="brand-title">Aether Energy Arbitrage</div>
-        <div class="brand-subtitle">Real-Time (RTM) vs Day-Ahead (DAM) Telemetry Engine</div>
+        <div class="brand-subtitle">Real ISO Market Telemetry Backend</div>
       </div>
     </div>
 
     <div class="controls-group">
       <div class="pulse-badge">
         <div class="pulse-dot"></div>
-        <span id="live-status">LIVE TELEMETRY</span>
+        <span id="sync-status">SYNCED WITH PIPELINE</span>
       </div>
 
-      <select class="select-input" id="iso-select" onchange="switchISO()">
+      <select class="select-input" id="iso-select" onchange="renderActiveISO()">
         <option value="ERCOT">ERCOT (Texas - West Hub)</option>
         <option value="CAISO">CAISO (California - SP15)</option>
-        <option value="PJM">PJM (Mid-Atlantic - PJM West)</option>
-        <option value="NYISO">NYISO (New York - Zone J NYC)</option>
+        <option value="PJM">PJM (Mid-Atlantic - West)</option>
+        <option value="NYISO">NYISO (New York - Zone J)</option>
       </select>
 
-      <button class="btn" onclick="triggerManualRefresh()">⚡ Refresh Engine</button>
+      <button class="btn" onclick="fetchLiveDataset()">⚡ Pull JSON Data</button>
     </div>
   </header>
 
-  <!-- Top Metrics Row -->
   <div class="metrics-grid">
     <div class="metric-card accent-cyan">
-      <div class="metric-label">
-        <span>Real-Time LMP (5-Min)</span>
-        <span>RTM</span>
-      </div>
-      <div class="metric-value" id="val-rtm">$48.20</div>
-      <div class="metric-sub">
-        <span id="rtm-trend" class="pos">▲ +$4.15</span> vs previous interval
-      </div>
+      <div class="metric-label"><span>Real-Time LMP</span><span>RTM</span></div>
+      <div class="metric-value" id="val-rtm">--</div>
+      <div class="metric-sub">Latest 5-Min Settlement</div>
     </div>
 
     <div class="metric-card accent-amber">
-      <div class="metric-label">
-        <span>Day-Ahead Clearing Price</span>
-        <span>DAM</span>
-      </div>
-      <div class="metric-value" id="val-dam">$41.80</div>
-      <div class="metric-sub">
-        <span>Cleared Hour 14 Index</span>
-      </div>
+      <div class="metric-label"><span>Day-Ahead Price</span><span>DAM</span></div>
+      <div class="metric-value" id="val-dam">--</div>
+      <div class="metric-sub">Day-Ahead Clearing Price</div>
     </div>
 
     <div class="metric-card accent-emerald" id="spread-card">
-      <div class="metric-label">
-        <span>Arbitrage Spread Δ</span>
-        <span>RTM - DAM</span>
-      </div>
-      <div class="metric-value" id="val-spread">+$6.40</div>
-      <div class="metric-sub">
-        <span id="spread-status" class="pos">RTM Premium (Discharge)</span>
-      </div>
+      <div class="metric-label"><span>Arbitrage Spread</span><span>RTM - DAM</span></div>
+      <div class="metric-value" id="val-spread">--</div>
+      <div class="metric-sub" id="spread-status">Active Market Premium</div>
     </div>
 
     <div class="metric-card accent-rose">
-      <div class="metric-label">
-        <span>Est. BESS 2hr Margin</span>
-        <span>10MW / 20MWh BESS</span>
-      </div>
-      <div class="metric-value" id="val-profit">$1,280</div>
-      <div class="metric-sub">
-        <span>85% Round-Trip Efficiency</span>
-      </div>
+      <div class="metric-label"><span>Est. BESS Profit</span><span>10MW / 20MWh</span></div>
+      <div class="metric-value" id="val-profit">--</div>
+      <div class="metric-sub">85% Round-Trip Efficiency</div>
     </div>
   </div>
 
-  <!-- Dashboard Main Grid -->
   <div class="dashboard-layout">
-    
-    <!-- Left Panel: Dual Axis LMP Curve & Spread Bars -->
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title">
-          <span>📈 Locational Marginal Price (LMP) Curve &amp; Arbitrage Spreads</span>
-        </div>
-        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">
-          $/MWh | 5-Min Granularity
-        </div>
+        <div class="panel-title">📈 Real-Time Market LMP Curves</div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);" id="last-updated-label">Updated: --</div>
       </div>
       <div class="chart-container">
         <canvas id="lmpChart"></canvas>
       </div>
     </div>
 
-    <!-- Right Panel Stack: Arbitrage Signal, Weather Drivers, Regional Grid Table -->
     <div class="side-stack">
-      
-      <!-- BESS / Virtual Bid Strategy Exec -->
       <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">🎯 Storage / Virtual Arbitrage Signal</div>
-        </div>
+        <div class="panel-header"><div class="panel-title">🎯 Storage / Virtual Signal</div></div>
         <div class="signal-card">
-          <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Battery Strategy Recommendation</div>
-          <div class="signal-indicator signal-discharge" id="bess-signal">DISCHARGE STORAGE (SELL)</div>
-          <div style="font-size: 11px; color: var(--text-dim);" id="signal-desc">
-            RTM is spiking above DAM cleared price. High thermal dispatch cost detected on grid.
-          </div>
+          <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Battery Recommendation</div>
+          <div class="signal-indicator signal-neutral" id="bess-signal">ANALYZING...</div>
+          <div style="font-size: 11px; color: var(--text-dim);" id="signal-desc">Calculating price spreads...</div>
         </div>
       </div>
 
-      <!-- Live Open-Meteo Weather Drivers -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title">🌤️ Real-Time Grid Weather Drivers</div>
-          <span style="font-size: 10px; color: var(--accent-cyan);" id="weather-location">Midland, TX</span>
-        </div>
-        <div style="font-size: 11px; color: var(--text-muted);">
-          Physical weather metrics directly driving renewable generation supply &amp; load demand spikes.
+          <div class="panel-title">🌤️ Physical Weather Drivers</div>
+          <span style="font-size: 10px; color: var(--accent-cyan);" id="weather-location">--</span>
         </div>
         <div class="weather-grid">
-          <div class="weather-item">
-            <div class="lbl">Temp</div>
-            <div class="val" id="wx-temp">--°C</div>
-          </div>
-          <div class="weather-item">
-            <div class="lbl">Solar Rad</div>
-            <div class="val" id="wx-solar">-- W/m²</div>
-          </div>
-          <div class="weather-item">
-            <div class="lbl">Wind (10m)</div>
-            <div class="val" id="wx-wind">-- m/s</div>
-          </div>
+          <div class="weather-item"><div class="lbl">Temp</div><div class="val" id="wx-temp">--°C</div></div>
+          <div class="weather-item"><div class="lbl">Solar</div><div class="val" id="wx-solar">-- W/m²</div></div>
+          <div class="weather-item"><div class="lbl">Wind</div><div class="val" id="wx-wind">-- m/s</div></div>
         </div>
       </div>
 
-      <!-- ISO Regional Spread Matrix -->
       <div class="panel" style="flex-grow: 1;">
-        <div class="panel-header">
-          <div class="panel-title">🌐 ISO Arbitrage Matrix</div>
-        </div>
+        <div class="panel-header"><div class="panel-title">🌐 ISO Spread Matrix</div></div>
         <table class="data-table">
           <thead>
-            <tr>
-              <th>ISO Hub</th>
-              <th>RTM</th>
-              <th>DAM</th>
-              <th>Spread</th>
-              <th>Action</th>
-            </tr>
+            <tr><th>Hub</th><th>RTM</th><th>DAM</th><th>Spread</th><th>Action</th></tr>
           </thead>
-          <tbody id="iso-matrix-body">
-            <!-- Populated via JS -->
-          </tbody>
+          <tbody id="iso-matrix-body"></tbody>
         </table>
       </div>
-
     </div>
-
   </div>
 
   <script>
-    // ISO Hub Configuration with Centroid Coordinates for Open-Meteo API
-    const ISO_CONFIG = {
-      'ERCOT': { name: 'ERCOT (Texas - West Hub)', lat: 31.9974, lon: -102.0779, city: 'Midland, TX (West Hub)', baseDam: 42.0 },
-      'CAISO': { name: 'CAISO (California - SP15)', lat: 35.3733, lon: -119.0187, city: 'Bakersfield, CA (SP15)', baseDam: 55.0 },
-      'PJM': { name: 'PJM (Mid-Atlantic - West)', lat: 40.4406, lon: -79.9959, city: 'Pittsburgh, PA (PJM-W)', baseDam: 38.0 },
-      'NYISO': { name: 'NYISO (New York - Zone J)', lat: 40.7128, lon: -74.0060, city: 'New York, NY (Zone J)', baseDam: 62.0 }
-    };
-
-    let activeISO = 'ERCOT';
+    let marketDataset = null;
     let chartInstance = null;
-    let telemetryTimer = null;
 
-    // Simulation & Live State Data
-    let timeLabels = [];
-    let damData = [];
-    let rtmData = [];
-    let spreadData = [];
-
-    // Initialize Chart.js Chart
     function initChart() {
       const ctx = document.getElementById('lmpChart').getContext('2d');
-      
       chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: timeLabels,
+          labels: [],
           datasets: [
-            {
-              label: 'Real-Time LMP ($/MWh)',
-              data: rtmData,
-              borderColor: '#38bdf8',
-              backgroundColor: 'rgba(56, 189, 248, 0.05)',
-              borderWidth: 2,
-              tension: 0.2,
-              pointRadius: 2,
-              yAxisID: 'y'
-            },
-            {
-              label: 'Day-Ahead LMP ($/MWh)',
-              data: damData,
-              borderColor: '#f59e0b',
-              borderDash: [4, 4],
-              borderWidth: 2,
-              tension: 0.1,
-              pointRadius: 0,
-              yAxisID: 'y'
-            },
-            {
-              label: 'Spread (RTM - DAM)',
-              data: spreadData,
-              type: 'bar',
-              backgroundColor: (context) => {
-                const val = context.raw;
-                return val >= 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.4)';
-              },
-              borderColor: (context) => {
-                const val = context.raw;
-                return val >= 0 ? '#10b981' : '#f43f5e';
-              },
-              borderWidth: 1,
-              yAxisID: 'y1'
-            }
+            { label: 'RTM LMP ($/MWh)', data: [], borderColor: '#38bdf8', borderWidth: 2, tension: 0.2, pointRadius: 2, yAxisID: 'y' },
+            { label: 'DAM LMP ($/MWh)', data: [], borderColor: '#f59e0b', borderDash: [4, 4], borderWidth: 2, pointRadius: 0, yAxisID: 'y' },
+            { label: 'Spread ($/MWh)', data: [], type: 'bar', backgroundColor: (ctx) => (ctx.raw >= 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.4)'), yAxisID: 'y1' }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: {
-              labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } }
-            },
-            tooltip: {
-              backgroundColor: '#0e131f',
-              titleColor: '#f8fafc',
-              bodyFont: { family: 'JetBrains Mono' },
-              borderColor: 'rgba(255,255,255,0.1)',
-              borderWidth: 1
-            }
-          },
+          plugins: { legend: { labels: { color: '#94a3b8' } } },
           scales: {
-            x: {
-              grid: { color: 'rgba(255,255,255,0.03)' },
-              ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
-            },
-            y: {
-              type: 'linear',
-              position: 'left',
-              title: { display: true, text: 'LMP Price ($/MWh)', color: '#94a3b8', font: { size: 10 } },
-              grid: { color: 'rgba(255,255,255,0.05)' },
-              ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }
-            },
-            y1: {
-              type: 'linear',
-              position: 'right',
-              title: { display: true, text: 'Spread ($/MWh)', color: '#64748b', font: { size: 10 } },
-              grid: { drawOnChartArea: false },
-              ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
-            }
+            x: { ticks: { color: '#64748b' } },
+            y: { position: 'left', title: { display: true, text: 'LMP ($/MWh)', color: '#94a3b8' }, ticks: { color: '#94a3b8' } },
+            y1: { position: 'right', title: { display: true, text: 'Spread ($/MWh)', color: '#64748b' }, grid: { drawOnChartArea: false }, ticks: { color: '#64748b' } }
           }
         }
       });
     }
 
-    // Fetch Live Real-Time Weather from Open-Meteo
-    async function fetchWeather(isoKey) {
-      const config = ISO_CONFIG[isoKey];
-      document.getElementById('weather-location').innerText = config.city;
-
+    async function fetchLiveDataset() {
       try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.lat}&longitude=${config.lon}&current=temperature_2m,direct_normal_irradiance,wind_speed_10m`;
-        const res = await fetch(url);
-        const data = await res.json();
-        
-        if (data && data.current) {
-          const temp = data.current.temperature_2m;
-          const solar = data.current.direct_normal_irradiance || 0;
-          const wind = data.current.wind_speed_10m;
-
-          document.getElementById('wx-temp').innerText = `${temp}°C`;
-          document.getElementById('wx-solar').innerText = `${Math.round(solar)} W/m²`;
-          document.getElementById('wx-wind').innerText = `${wind} m/s`;
-
-          return { temp, solar, wind };
-        }
-      } catch (e) {
-        console.warn('Weather API fetch failed, falling back to simulated physics:', e);
-      }
-      return { temp: 28, solar: 450, wind: 6.5 }; // Realistic fallback
-    }
-
-    // Generator Engine for LMP telemetry curves based on weather drivers
-    function generateInitialTimeSeries(baseDam, weather) {
-      timeLabels = [];
-      damData = [];
-      rtmData = [];
-      spreadData = [];
-
-      const now = new Date();
-
-      // Generate 24 intervals (5-min ticks leading up to current time)
-      for (let i = 23; i >= 0; i--) {
-        const t = new Date(now.getTime() - i * 5 * 60 * 1000);
-        const timeStr = t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-        timeLabels.push(timeStr);
-
-        // Day ahead base curve
-        const damVal = baseDam + Math.sin(i / 3) * 6;
-        damData.push(parseFloat(damVal.toFixed(2)));
-
-        // Real-time curve affected by solar/wind weather shocks
-        let rtmShock = (Math.random() - 0.45) * 8;
-        if (weather.solar > 600) rtmShock -= 4; // High solar depresses RT price
-        if (weather.wind < 3.0) rtmShock += 7;  // Low wind spikes RT price due to thermal dispatch
-        if (weather.temp > 32) rtmShock += 9;   // Extreme heat drives load spikes
-
-        const rtmVal = Math.max(10, damVal + rtmShock);
-        rtmData.push(parseFloat(rtmVal.toFixed(2)));
-
-        const spread = rtmVal - damVal;
-        spreadData.push(parseFloat(spread.toFixed(2)));
+        const res = await fetch('./data/market_data.json?cache=' + Date.now());
+        marketDataset = await res.json();
+        document.getElementById('sync-status').innerText = 'SYNCED: ' + new Date(marketDataset.updated_at).toLocaleTimeString();
+        renderActiveISO();
+        renderMatrix();
+      } catch (err) {
+        console.error("Could not fetch market_data.json", err);
+        document.getElementById('sync-status').innerText = 'PIPELINE OFFLINE';
       }
     }
 
-    // Refresh Dashboard Engine
-    async function updateDashboard() {
-      const config = ISO_CONFIG[activeISO];
-      const weather = await fetchWeather(activeISO);
+    function renderActiveISO() {
+      if (!marketDataset) return;
+      const key = document.getElementById('iso-select').value;
+      const data = marketDataset.markets[key];
 
-      generateInitialTimeSeries(config.baseDam, weather);
-
-      // Update Chart
-      chartInstance.data.labels = timeLabels;
-      chartInstance.data.datasets[0].data = rtmData;
-      chartInstance.data.datasets[1].data = damData;
-      chartInstance.data.datasets[2].data = spreadData;
-      chartInstance.update();
-
-      // Update Top Metrics
-      const latestRTM = rtmData[rtmData.length - 1];
-      const latestDAM = damData[damData.length - 1];
-      const prevRTM = rtmData[rtmData.length - 2];
-      const spread = latestRTM - latestDAM;
-      const rtmChange = latestRTM - prevRTM;
-
-      document.getElementById('val-rtm').innerText = `$${latestRTM.toFixed(2)}`;
-      document.getElementById('val-dam').innerText = `$${latestDAM.toFixed(2)}`;
+      document.getElementById('val-rtm').innerText = `$${data.pricing.rtm_latest.toFixed(2)}`;
+      document.getElementById('val-dam').innerText = `$${data.pricing.dam_latest.toFixed(2)}`;
+      
+      const spread = data.pricing.spread_latest;
       document.getElementById('val-spread').innerText = `${spread >= 0 ? '+' : ''}$${spread.toFixed(2)}`;
 
-      const rtmTrendEl = document.getElementById('rtm-trend');
-      rtmTrendEl.className = rtmChange >= 0 ? 'pos' : 'neg';
-      rtmTrendEl.innerText = `${rtmChange >= 0 ? '▲ +' : '▼ '}$${Math.abs(rtmChange).toFixed(2)}`;
+      const profit = Math.max(0, spread) * 20 * 0.85;
+      document.getElementById('val-profit').innerText = `$${Math.round(profit).toLocaleString()}`;
 
-      // Calculate BESS 10MW/20MWh profit estimate
-      const bessEfficiency = 0.85;
-      const profitVal = Math.max(0, spread) * 20 * bessEfficiency;
-      document.getElementById('val-profit').innerText = `$${Math.round(profitVal).toLocaleString()}`;
+      // Weather Drivers
+      document.getElementById('weather-location').innerText = data.metadata.city;
+      document.getElementById('wx-temp').innerText = `${data.weather.temp}°C`;
+      document.getElementById('wx-solar').innerText = `${data.weather.solar} W/m²`;
+      document.getElementById('wx-wind').innerText = `${data.weather.wind} m/s`;
 
-      // Update Arbitrage Signal Box
+      // Signal Logic
       const signalEl = document.getElementById('bess-signal');
       const descEl = document.getElementById('signal-desc');
-      const spreadCardEl = document.getElementById('spread-card');
-
-      if (spread > 5.0) {
+      if (spread > 4.0) {
         signalEl.className = 'signal-indicator signal-discharge';
         signalEl.innerText = 'DISCHARGE STORAGE (SELL RTM)';
-        descEl.innerText = `RTM premium is $${spread.toFixed(2)}/MWh over DAM. Discharge battery assets or sell virtual power.`;
-        spreadCardEl.className = 'metric-card accent-rose';
-        document.getElementById('spread-status').innerText = 'High RTM Premium';
-      } else if (spread < -4.0) {
+        descEl.innerText = `RTM premium is $${spread.toFixed(2)}/MWh over DAM. High dispatch value.`;
+      } else if (spread < -3.0) {
         signalEl.className = 'signal-indicator signal-charge';
         signalEl.innerText = 'CHARGE STORAGE (BUY RTM)';
-        descEl.innerText = `RTM is discounted $${Math.abs(spread).toFixed(2)}/MWh below DAM. Ideal window for battery charging.`;
-        spreadCardEl.className = 'metric-card accent-emerald';
-        document.getElementById('spread-status').innerText = 'RTM Discount (Charge)';
+        descEl.innerText = `RTM is discounted $${Math.abs(spread).toFixed(2)}/MWh below DAM. Optimal charging window.`;
       } else {
         signalEl.className = 'signal-indicator signal-neutral';
-        signalEl.innerText = 'NEUTRAL / HOLD POSITION';
-        descEl.innerText = 'Spread is within non-arbitrage friction band ($4/MWh). Hold storage state of charge.';
-        spreadCardEl.className = 'metric-card accent-amber';
-        document.getElementById('spread-status').innerText = 'Balanced Market';
+        signalEl.innerText = 'NEUTRAL / HOLD';
+        descEl.innerText = 'Market spread within operational friction band.';
       }
 
-      // Render Regional Matrix Table
-      renderRegionalTable();
+      // Update Chart
+      chartInstance.data.labels = data.pricing.series.timestamps;
+      chartInstance.data.datasets[0].data = data.pricing.series.rtm;
+      chartInstance.data.datasets[1].data = data.pricing.series.dam;
+      chartInstance.data.datasets[2].data = data.pricing.series.spread;
+      chartInstance.update();
     }
 
-    // Render Matrix for all ISOs
-    function renderRegionalTable() {
+    function renderMatrix() {
       const tbody = document.getElementById('iso-matrix-body');
       tbody.innerHTML = '';
+      const activeKey = document.getElementById('iso-select').value;
 
-      Object.keys(ISO_CONFIG).forEach(key => {
-        const isCurrent = key === activeISO;
-        const cfg = ISO_CONFIG[key];
-        
-        // Dynamic estimate for matrix view
-        const dam = cfg.baseDam;
-        const rtm = isCurrent ? rtmData[rtmData.length - 1] : dam + (Math.random() - 0.45) * 10;
-        const spread = rtm - dam;
+      Object.keys(marketDataset.markets).forEach(key => {
+        const item = marketDataset.markets[key];
+        const rtm = item.pricing.rtm_latest;
+        const dam = item.pricing.dam_latest;
+        const spread = item.pricing.spread_latest;
 
-        let actionText = 'HOLD';
-        let actionClass = 'color: var(--accent-amber);';
-
-        if (spread > 4.0) {
-          actionText = 'DISCHARGE';
-          actionClass = 'color: var(--accent-rose); font-weight:700;';
-        } else if (spread < -3.0) {
-          actionText = 'CHARGE';
-          actionClass = 'color: var(--accent-emerald); font-weight:700;';
-        }
+        let action = 'HOLD';
+        let actionStyle = 'color: var(--accent-amber);';
+        if (spread > 4.0) { action = 'DISCHARGE'; actionStyle = 'color: var(--accent-rose); font-weight:bold;'; }
+        else if (spread < -3.0) { action = 'CHARGE'; actionStyle = 'color: var(--accent-emerald); font-weight:bold;'; }
 
         const tr = document.createElement('tr');
-        if (isCurrent) tr.style.background = 'rgba(56, 189, 248, 0.08)';
-
+        if (key === activeKey) tr.style.background = 'rgba(56, 189, 248, 0.08)';
         tr.innerHTML = `
-          <td style="font-weight: 600; ${isCurrent ? 'color: var(--accent-cyan)' : ''}">${key}</td>
+          <td><strong>${key}</strong></td>
           <td>$${rtm.toFixed(2)}</td>
           <td>$${dam.toFixed(2)}</td>
           <td style="${spread >= 0 ? 'color: var(--accent-emerald)' : 'color: var(--accent-rose)'}">${spread >= 0 ? '+' : ''}$${spread.toFixed(2)}</td>
-          <td style="${actionClass}">${actionText}</td>
+          <td style="${actionStyle}">${action}</td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    function switchISO() {
-      activeISO = document.getElementById('iso-select').value;
-      updateDashboard();
-    }
-
-    function triggerManualRefresh() {
-      const statusEl = document.getElementById('live-status');
-      statusEl.innerText = 'REFRESHING...';
-      updateDashboard().then(() => {
-        setTimeout(() => statusEl.innerText = 'LIVE TELEMETRY', 600);
-      });
-    }
-
-    // Page Load Setup
     window.addEventListener('DOMContentLoaded', () => {
       initChart();
-      updateDashboard();
-
-      // Live 5-second polling loop
-      telemetryTimer = setInterval(() => {
-        // Append a live tick simulation to the existing dataset
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-        
-        const lastDam = damData[damData.length - 1];
-        const newRtm = Math.max(10, lastDam + (Math.random() - 0.46) * 12);
-        const newSpread = newRtm - lastDam;
-
-        timeLabels.shift();
-        damData.shift();
-        rtmData.shift();
-        spreadData.shift();
-
-        timeLabels.push(timeStr);
-        damData.push(lastDam);
-        rtmData.push(parseFloat(newRtm.toFixed(2)));
-        spreadData.push(parseFloat(newSpread.toFixed(2)));
-
-        chartInstance.update('none'); // smooth update without full redraw animation
-        
-        document.getElementById('val-rtm').innerText = `$${newRtm.toFixed(2)}`;
-        document.getElementById('val-spread').innerText = `${newSpread >= 0 ? '+' : ''}$${newSpread.toFixed(2)}`;
-      }, 5000);
+      fetchLiveDataset();
+      setInterval(fetchLiveDataset, 60000);
     });
   </script>
 </body>
