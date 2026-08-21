@@ -4,13 +4,16 @@ import pandas as pd
 import gridstatus
 
 def get_iso_prices(iso_code):
-    today = datetime.date.today()
+    """Fetches genuine Real-Time (5/15 min) and Day-Ahead (Hourly) market data."""
     series_time, series_rtm = [], []
+    dam_val = None
     
     try:
         if iso_code == 'ERCOT':
             iso = gridstatus.Ercot()
-            df_rtm = iso.get_spp(date=today, market='REAL_TIME_15_MIN')
+            
+            # Fetch Real Data: RTM
+            df_rtm = iso.get_spp(date="today", market='REAL_TIME_15_MIN')
             if not df_rtm.empty:
                 loc_col = 'Location' if 'Location' in df_rtm.columns else df_rtm.columns[1]
                 val_col = 'SPP' if 'SPP' in df_rtm.columns else 'LMP'
@@ -19,8 +22,17 @@ def get_iso_prices(iso_code):
                 series_rtm = [round(float(x), 2) for x in filtered[val_col].tolist()]
                 series_time = [pd.to_datetime(t).strftime('%H:%M') for t in filtered['Time'].tolist()]
 
+            # Fetch Real Data: DAM
+            df_dam = iso.get_spp(date="today", market='DAY_AHEAD_HOURLY')
+            if not df_dam.empty:
+                filtered_dam = df_dam[df_dam[loc_col] == 'HB_WEST'] if 'HB_WEST' in df_dam[loc_col].values else df_dam
+                # Grab the most recent hourly settlement price
+                dam_val = float(filtered_dam[val_col].iloc[-1])
+
         elif iso_code == 'CAISO':
             iso = gridstatus.CAISO()
+            
+            # Fetch Real Data: RTM
             df_rtm = iso.get_lmp(date="today", market="REAL_TIME_5_MIN", locations=["TH_SP15_GEN-APND"])
             if not df_rtm.empty:
                 val_col = 'LMP' if 'LMP' in df_rtm.columns else df_rtm.columns[-1]
@@ -29,8 +41,15 @@ def get_iso_prices(iso_code):
                 time_col = 'Time' if 'Time' in filtered.columns else filtered.columns[0]
                 series_time = [pd.to_datetime(t).strftime('%H:%M') for t in filtered[time_col].tolist()]
 
+            # Fetch Real Data: DAM
+            df_dam = iso.get_lmp(date="today", market="DAY_AHEAD_HOURLY", locations=["TH_SP15_GEN-APND"])
+            if not df_dam.empty:
+                dam_val = float(df_dam['LMP'].iloc[-1])
+
         elif iso_code == 'NYISO':
             iso = gridstatus.NYISO()
+            
+            # Fetch Real Data: RTM
             df_rtm = iso.get_lmp(date="today", market="REAL_TIME_5_MIN", locations=["N.Y.C."])
             if not df_rtm.empty:
                 val_col = 'LMP' if 'LMP' in df_rtm.columns else df_rtm.columns[-1]
@@ -39,13 +58,20 @@ def get_iso_prices(iso_code):
                 time_col = 'Time' if 'Time' in filtered.columns else filtered.columns[0]
                 series_time = [pd.to_datetime(t).strftime('%H:%M') for t in filtered[time_col].tolist()]
 
+            # Fetch Real Data: DAM
+            df_dam = iso.get_lmp(date="today", market="DAY_AHEAD_HOURLY", locations=["N.Y.C."])
+            if not df_dam.empty:
+                dam_val = float(df_dam['LMP'].iloc[-1])
+
         elif iso_code == 'MISO':
             iso = gridstatus.MISO()
+            
+            # Fetch Real Data: RTM
             try:
-                # MISO natively prefers "latest" in older gridstatus versions, try "today" first
                 df_rtm = iso.get_lmp(date="today", market="REAL_TIME_5_MIN", locations=["ILLINOIS.HUB"])
             except:
                 df_rtm = iso.get_lmp(date="latest", market="REAL_TIME_5_MIN", locations=["ILLINOIS.HUB"])
+            
             if not df_rtm.empty:
                 val_col = 'LMP' if 'LMP' in df_rtm.columns else df_rtm.columns[-1]
                 filtered = df_rtm.tail(12)
@@ -53,17 +79,19 @@ def get_iso_prices(iso_code):
                 time_col = 'Time' if 'Time' in filtered.columns else filtered.columns[0]
                 series_time = [pd.to_datetime(t).strftime('%H:%M') for t in filtered[time_col].tolist()]
 
+            # Fetch Real Data: DAM
+            try:
+                df_dam = iso.get_lmp(date="today", market="DAY_AHEAD_HOURLY", locations=["ILLINOIS.HUB"])
+                if not df_dam.empty:
+                    dam_val = float(df_dam['LMP'].iloc[-1])
+            except:
+                pass
+
     except Exception as e:
         print(f"Error fetching ISO data for {iso_code}: {e}")
 
-    # Hard Fallback for completely missing data
-    if not series_rtm:
-        now = datetime.datetime.now()
-        series_time = [(now - datetime.timedelta(minutes=5*i)).strftime('%H:%M') for i in range(11, -1, -1)]
-        series_rtm = [round(35.0 + (i * 0.8), 2) for i in range(12)]
-    
-    # Soft Fallback: If an ISO (like MISO) returns only 1 row for "latest", back-pad the series to 12
-    if len(series_rtm) < 12:
+    # Soft Fallback: If an ISO API timeout leaves us with < 12 points, back-pad the real data to keep the UI from breaking.
+    if len(series_rtm) > 0 and len(series_rtm) < 12:
         diff = 12 - len(series_rtm)
         last_val = series_rtm[0]
         last_time = pd.to_datetime(series_time[0])
@@ -71,9 +99,19 @@ def get_iso_prices(iso_code):
         pad_rtm = [last_val] * diff
         series_time = pad_time + series_time
         series_rtm = pad_rtm + series_rtm
+        
+    # Hard Fallback: Only triggers if the ISO API is completely down/offline.
+    if not series_rtm:
+        now = datetime.datetime.now()
+        series_time = [(now - datetime.timedelta(minutes=5*i)).strftime('%H:%M') for i in range(11, -1, -1)]
+        series_rtm = [0.0] * 12
+    if dam_val is None:
+        dam_val = 0.0
 
     rtm_val = series_rtm[-1]
-    dam_val = round(rtm_val * 0.95, 2)
+    dam_val = round(dam_val, 2)
+    
+    # Apply the real DAM hourly price across the RTM array to calculate true arbitrage spreads
     series_dam = [dam_val] * len(series_rtm)
     spreads = [round(r - d, 2) for r, d in zip(series_rtm, series_dam)]
 
@@ -94,10 +132,9 @@ def main():
     markets_payload = {}
 
     for iso in isos:
-        print(f"Processing telemetry for {iso}...")
+        print(f"Fetching real telemetry for {iso}...")
         markets_payload[iso] = get_iso_prices(iso)
     
-    # Fix for the website UI blanking out
     payload = {
         "updated_at": datetime.datetime.now().isoformat(),
         "markets": markets_payload
